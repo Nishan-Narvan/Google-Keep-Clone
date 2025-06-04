@@ -42,7 +42,7 @@ const Navbar = ({ mode, setMode }) => {
         />
         <FaLightbulb 
           onClick={setToggle}
-          className={`absolute inset-0 text-yellow-400 text-2xl transition-all duration-300 ease-in-out ${
+          className={`absolute inset-0 border border-black px-1 text-yellow-400 text-2xl transition-all duration-300 ease-in-out ${
             !mode ? "opacity-100 rotate-0" : "opacity-0 rotate-90"
           }`}
         />
