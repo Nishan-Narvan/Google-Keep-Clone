@@ -1,9 +1,9 @@
 import { useState } from "react";
 
 import NoteInput from "../components/NoteInput";
-import NoteList from "../components/NoteList";
 
-function Home({ mode }) {
+
+function Home({ mode, setArchieved,  setTrashed }) {
   return (
     <div className="relative flex-1">
 <img src="https://i.pinimg.com/originals/c2/44/5d/c2445dd759cf52be7e37d294c62d730e.gif" className="absolute z-0 object-cover w-full h-full"></img>
@@ -13,8 +13,8 @@ function Home({ mode }) {
           mode ? "bg-gray-800" : "bg-[]#f3f4f6]"
         }`}
       >
-        <NoteInput mode={mode} />
-        <NoteList mode={mode} />
+        <NoteInput mode={mode}  setArchieved={setArchieved}  setTrashed={setTrashed}  />
+      
       </div>
     </div>
   );

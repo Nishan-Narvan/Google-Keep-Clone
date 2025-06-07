@@ -7,12 +7,23 @@ import Home from "./pages/Home";
 import Pomodoro from "./pages/Pomodoro";
 import Archive from "./pages/Archive";
 import Trash from "./pages/Trash";
-import NoPage from "./pages/NoPage";
+import NoPage from "./pages/Nopage";
 import Search from "./pages/Search";
 
 export default function App() {
   const [mode, setMode] = useState(false);
   const [lines, setLines] = useState(true);
+  
+  const[trashed, setTrashed] = useState([]);
+
+
+
+ const [archieved, setArchieved] = useState([]);
+  const [archievedtitle, setArchievedtitle] = useState([]);
+  const [archieveddesc, setArchieveddesc] = useState([]);
+
+
+
   return (
     <BrowserRouter>
       <div
@@ -33,10 +44,10 @@ export default function App() {
           <div />
           <div className="relative "/>
           <Routes>
-            <Route path="/" element={<Home mode={mode} />} />
-            <Route path="/pomodoro" element={<Pomodoro />} />
-            <Route path="/archive" element={<Archive />} />
-            <Route path="/trash" element={<Trash />} />
+            <Route path="/" element={<Home mode={mode}  setArchieved={setArchieved}  setTrashed={setTrashed} />} />
+            <Route path="/pomodoro" element={<Pomodoro mode={mode} />} />
+            <Route path="/archive" element={<Archive mode={mode } archieved={archieved}  />} />
+            <Route path="/trash" element={<Trash  trashed={trashed} mode={mode} />} />
             <Route path="/search" element={<Search />} />
             <Route path="*" element={<NoPage />} />
           </Routes>

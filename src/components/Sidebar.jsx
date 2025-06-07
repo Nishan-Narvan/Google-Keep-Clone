@@ -93,11 +93,15 @@ const Sidebar = ({ mode, lines }) => {
           <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
             Trash
           </span>
+        
+        
         )}
+
+        <div className="w-full h-5 bg-gradient-to-t from-[#255335] to-transparent absolute bottom-0 left-0 z-10 pointer-events-none" />
       </div>
       
     
-<div className="w-full h-5 bg-gradient-to-t from-[#255335] to-transparent absolute bottom-0 left-0 z-10 pointer-events-none" />
+
     </div>
   );
 };
