@@ -97,7 +97,7 @@ const Sidebar = ({ mode, lines }) => {
         
         )}
 
-        <div className="w-full h-5 bg-gradient-to-t from-[#255335] to-transparent absolute bottom-0 left-0 z-10 pointer-events-none" />
+        <div className="w-full h-6 bg-gradient-to-t from-[#1e3f29] to-transparent absolute bottom-0 left-0 z-10 pointer-events-none" />
       </div>
       
     

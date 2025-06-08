@@ -72,16 +72,16 @@ const Navbar = ({ mode, setMode, lines, setLines }) => {
         />
       </div>
       {/* Right Navbar */}
-      <div className="relative h-8 w-8">
+      <div className="relative h-8 w-8 border border-gray-500 rounded-full shadow-md ">
         <FaMoon
           onClick={setToggle}
-          className={`absolute inset-0 border-gray-300 cursor-pointer shadow-lg border rounded-2xl text-3xl transition-all duration-300 ease-in-out ${
+          className={`absolute inset-0  cursor-pointer shadow-lg  border text-white rounded-2xl text-3xl transition-all duration-300 ease-in-out ${
             mode ? "opacity-100 rotate-0" : "opacity-0 -rotate-90"
           }`}
         />
         <FaLightbulb
           onClick={setToggle}
-          className={`absolute inset-0  px-1 rounded-xl cursor-pointer shadow-lg border border-gray-300 hover:text-yellow-400 text-2xl transition-all duration-300 ease-in-out ${
+          className={`absolute inset-0  px- rounded-xl cursor-pointer shadow-lg border border-gray-300  text-gray-800 hover:text-gray-400 text-3xl transition-all duration-300 ease-in-out ${
             !mode ? "opacity-100 rotate-0" : "opacity-0 rotate-90"
           }`}
         />
