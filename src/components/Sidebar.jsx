@@ -12,7 +12,8 @@ import {
 const iconMotionProps = {
   whileHover: { scale: 1.05, translateY: -10, boxShadow: "6px 6px 0px black", backgroundColor: "#477f5f" },
   whileTap: { scale: 0.75 },
-  transition: { duration: 0.15 }
+  transition: { duration: 0.15 },
+   
 };
 
 const Sidebar = ({ mode, lines }) => {
@@ -35,7 +36,7 @@ const Sidebar = ({ mode, lines }) => {
   }
   
   return (
-    <div className={`flex relative flex-col gap-5 pr-8 px-5 py-5 h-full ${mode ? 'bg-gray-800' : 'bg-gray-200'} shadow-md border-r border-solid border-gray-300 transition-all duration-300 ease-in-out ${
+    <div className={`flex relative flex-col gap-5 pr-8 px-5 py-5 h-full ${mode ? 'bg-gray-800' : 'bg-[#bcd3c3e5]'} shadow-md border-r border-solid border-gray-300 transition-all duration-300 ease-in-out ${
       lines ? 'w-64' : 'w-26'
     } ${lines? 'pl-6':'pr-6'} `}>
       

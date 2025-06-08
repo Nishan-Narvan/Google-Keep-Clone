@@ -102,7 +102,7 @@ function archieveNote(index) {
               scale: 1.05,
               translateY: -10,
               boxShadow: "6px 6px 0px black",
-              backgroundColor: "#477f5f"
+              backgroundColor: "bg-[#2F4F4F]",
             }}
             whileTap={{ scale: 0.75 }}
             transition={{ duration: 0.15 }}
@@ -168,7 +168,7 @@ When you use parentheses () around the function body, it's an implicit expressio
             <li
               key={index}
               className={`my-2 p-2 shadow-sm rounded-2xl ${
-                mode ? "bg-[#25353a]" : "bg-gray-800"
+                mode ? "bg-[#25353a]" : "bg-[#9eb4a4e5]"
               }`}
             >
               <motion.div
