@@ -57,7 +57,7 @@ const Sidebar = ({ mode, lines }) => {
         </motion.button>
          {lines && (
           <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Timer
+            Focus
           </span>
         )}
       </div>

@@ -168,7 +168,7 @@ When you use parentheses () around the function body, it's an implicit expressio
             <li
               key={index}
               className={`my-2 p-2 shadow-sm rounded-2xl ${
-                mode ? "bg-[#25353a]" : "bg-[#9eb4a4e5]"
+                mode ? "bg-[#25353a]" : "bg-[#69796ee5]"
               }`}
             >
               <motion.div
