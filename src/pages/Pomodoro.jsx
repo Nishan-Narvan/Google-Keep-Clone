@@ -137,7 +137,7 @@ const Pomodoro = ({mode}) => {
 
       {/* Hourglass Icon */}
       {isRunning && (
-        <FaHourglassHalf className="absolute bottom-25 hover:text-[#285639] hover:scale-130 transform transition-all duration-300 ease-in-out  left-67 ml-2 text-4xl text-gray-300 animate-pulse z-10" />
+        <FaHourglassHalf className="absolute bottom-25 hover:text-[#285639] hover:scale-130 transform transition-all duration-300 ease-in-out  left-67 ml-2 text-5xl text-gray-300 animate-pulse z-10" />
       )}
     </div>
   );
