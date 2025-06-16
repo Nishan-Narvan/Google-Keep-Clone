@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FaBars, FaSearch, FaMoon, FaLightbulb } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import logo from "../public/assets/logo.png";
 
 const Navbar = ({ mode, setMode, lines, setLines }) => {
 
@@ -38,7 +39,7 @@ const Navbar = ({ mode, setMode, lines, setLines }) => {
         </div>
         <img
           className="w-8 h-8 rounded-xl  text-3xl"
-          src="https://sdmntprcentralus.oaiusercontent.com/files/00000000-48f0-61f5-8178-491f74bf8155/raw?se=2025-06-08T20%3A23%3A58Z&sp=r&sv=2024-08-04&sr=b&scid=34953a7f-5ba3-5152-8b69-24e63fd89dea&skoid=31bc9c1a-c7e0-460a-8671-bf4a3c419305&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-06-08T13%3A02%3A09Z&ske=2025-06-09T13%3A02%3A09Z&sks=b&skv=2024-08-04&sig=n6ZGqZ%2Bw0Hy%2BT7wylDq3xZrC/cFHrlfd%2B8TBLMiwYIA%3D "
+          src={logo}
           alt="Google Keep Logo"
         />
         <h2
@@ -72,16 +73,16 @@ const Navbar = ({ mode, setMode, lines, setLines }) => {
         />
       </div>
       {/* Right Navbar */}
-      <div className="relative h-8 w-8 border border-gray-500 rounded-full shadow-md bg-[#acc5b4]">
+      <div className="relative h-8 w-8 border border-gray-500 rounded-full shadow-md bg-[#acc5b423]">
         <FaMoon
           onClick={setToggle}
-          className={`absolute inset-0  cursor-pointer shadow-lg  border text-shadow-gray-400 rounded-2xl text-3xl transition-all duration-300 ease-in-out ${
+          className={`absolute inset-0  cursor-pointer shadow-lg  border text-shadow-gray-950 rounded-2xl text-3xl transition-all duration-300 ease-in-out ${
             mode ? "opacity-100 rotate-0" : "opacity-0 -rotate-90"
           }`}
         />
         <FaLightbulb
           onClick={setToggle}
-          className={`absolute inset-0  px- rounded-xl cursor-pointer shadow-lg border border-gray-300  text-[#1e3f29] hover:text-gray-800 text-3xl transition-all duration-300 ease-in-out ${
+          className={`absolute inset-0 left-0.5 top-0.5 px-1 rounded-xl cursor-pointer shadow-lg border border-gray-300  text-[#c9c070] hover:text-gray-800 text-2xl transition-all duration-300 ease-in-out ${
             !mode ? "opacity-100 rotate-0" : "opacity-0 rotate-90"
           }`}
         />
