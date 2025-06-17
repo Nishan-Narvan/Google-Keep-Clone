@@ -227,7 +227,7 @@ const Pomodoro = ({mode}) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
-          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#d3ecdbd7]'} items-center gap-6 justify-between left-10 px-4 py-2 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border border-solid border-black z-10`}
+          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#d3ecdbd7]'} items-center gap-6 justify-between left-10 px-4 py-2 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border border-b-emerald-800  z-10`}
         >
           <input
             type="number"
