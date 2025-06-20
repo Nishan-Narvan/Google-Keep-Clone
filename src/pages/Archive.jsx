@@ -88,6 +88,4 @@ const Archive = ({ mode, archieved, onRestore, onDelete }) => {
     </div>
   );
 };
-ddddddd
-vdfd
 export default Archive;
