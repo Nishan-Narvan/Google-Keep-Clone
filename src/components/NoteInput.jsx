@@ -213,19 +213,3 @@ When you use parentheses () around the function body, it's an implicit expressio
 };
 
 export default NoteInput;
-skldfjsopdfj
-fsdklfjsdf\f
-sdkfsdlkf\
-difjsdf
-dfjsdf
-dlfjklsdfj
-dfjsdlfjdfdfdfsdfsdfsdf
-fgdfgdfgdftyrtutyutyutyutyty
-dklfjdf
-dkfjsdf
-dfkjsdlfjl
-sdlfjds;lfjds;lf
-sf;ldsfl
-dsfkdsf
-fkdsnflkdf
-dfdfdf
