@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { MdArchive, MdDeleteOutline } from "react-icons/md";
 
-const NoteInput = ({ mode, setArchieved,  setTrashed }) => {
-  const [notes, setNotes] = useState([]);
-  // notes array
+const NoteInput = ({ mode, notes, setNotes, setArchieved, setTrashed }) => {
+  // notes array is now passed from parent
   const [title, setTitle] = useState("");
   // title state
   const [desc, setDesc] = useState("");
@@ -19,6 +18,7 @@ const NoteInput = ({ mode, setArchieved,  setTrashed }) => {
     },
     transition: { duration: 0.3 },
   };
+  
   // How to add to the notes array using the button:
   // Check if the value in title and description  states are empty
   // a object with title and desc as properties is created
@@ -38,13 +38,11 @@ const NoteInput = ({ mode, setArchieved,  setTrashed }) => {
     setDesc("");
   }
 
-
-function archieveNote(index) {
+  function archieveNote(index) {
     const noteToArchive = notes[index];
     setArchieved((prev) => [...prev, noteToArchive]);
     setNotes((prev) => prev.filter((_, i) => i !== index));
   }
-
 
   function deleteNote(index) {
     const noteToDelete = notes[index];

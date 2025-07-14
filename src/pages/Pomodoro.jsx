@@ -73,8 +73,8 @@ const ProgressClock = ({ totalTime, remainingTime, mode }) => {
           />
         </svg>
         
-        {/* Time display in center */}
-        <div className={`absolute inset-0 flex items-center justify-center ${mode ? 'text-gray-100' : 'text-gray-800'} font-mono font-light text-3xl tracking-wider`}>
+        {/* Time display in center - Digital flip-clock style */}
+        <div className={`absolute inset-0 flex items-center justify-center ${mode ? 'text-gray-800' : 'text-[#285639]'} font-bold text-3xl tracking-[0.2em]`} style={{ fontFamily: 'monospace', textShadow: '0 0 10px rgba(0,0,0,0.3)' }}>
           {formatTime(remainingTime)}
         </div>
       </div>
@@ -90,11 +90,11 @@ const Pomodoro = ({mode}) => {
   const [showReset, setShowReset] = useState(false);
   const [initialTotalTime, setInitialTotalTime] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(0);
 
   const intervalRef = useRef(null);
 
   const totalSeconds = () => hours * 3600 + minutes * 60 + seconds;
-  const currentRemainingTime = totalSeconds();
 
   const handleToggle = () => {
     if (isRunning) {
@@ -107,57 +107,51 @@ const Pomodoro = ({mode}) => {
 
     // Store initial time when starting
     if (!showReset) {
-      setInitialTotalTime(totalSeconds());
+      const total = totalSeconds();
+      setInitialTotalTime(total);
+      setRemainingTime(total);
     }
 
     setIsRunning(true);
     setShowReset(true);
 
     intervalRef.current = setInterval(() => {
-      setSeconds((prevSec) => {
-        setMinutes((prevMin) => {
-          setHours((prevHrs) => {
-            // Calculate total remaining time
-            let totalRemaining = prevHrs * 3600 + prevMin * 60 + prevSec - 1;
+      setRemainingTime((prev) => {
+        const newTime = prev - 1;
+        
+        if (newTime <= 0) {
+          clearInterval(intervalRef.current);
+          setIsRunning(false);
+          setShowReset(true);
+          
+          // Show completion alert and update completed sessions
+          const completedMinutes = Math.round(initialTotalTime / 60);
+          setCompletedSessions(prev => prev + 1);
+          alert(`🎉 Congratulations! You have completed ${completedMinutes} minutes of flow!`);
+          
+          // Reset inputs to zero
+          setTimeout(() => {
+            setHours(0);
+            setMinutes(0);
+            setSeconds(0);
+            setShowReset(false);
+            setInitialTotalTime(0);
+            setRemainingTime(0);
+          }, 100);
+          
+          return 0;
+        }
 
-            if (totalRemaining <= 0) {
-              clearInterval(intervalRef.current);
-              setIsRunning(false);
-              setShowReset(true);
-              
-              // Show completion alert and update completed sessions
-              const completedMinutes = Math.round(initialTotalTime / 60);
-              setCompletedSessions(prev => prev + 1);
-              alert(`🎉 Congratulations! You have completed ${completedMinutes} minutes of flow!`);
-              
-              // Reset inputs to zero
-              setTimeout(() => {
-                setHours(0);
-                setMinutes(0);
-                setSeconds(0);
-                setShowReset(false);
-                setInitialTotalTime(0);
-              }, 100);
-              
-              return 0;
-            }
+        // Update the input fields to reflect remaining time
+        const newHours = Math.floor(newTime / 3600);
+        const newMinutes = Math.floor((newTime % 3600) / 60);
+        const newSeconds = newTime % 60;
 
-            // Update all values based on total remaining time
-            const newHours = Math.floor(totalRemaining / 3600);
-            const newMinutes = Math.floor((totalRemaining % 3600) / 60);
-            const newSeconds = totalRemaining % 60;
+        setHours(newHours);
+        setMinutes(newMinutes);
+        setSeconds(newSeconds);
 
-            // Set minutes and seconds in next render cycle
-            setTimeout(() => {
-              setMinutes(newMinutes);
-              setSeconds(newSeconds);
-            }, 0);
-
-            return newHours;
-          });
-          return prevMin; // This will be updated by setTimeout above
-        });
-        return prevSec; // This will be updated by setTimeout above
+        return newTime;
       });
     }, 1000);
   };
@@ -170,6 +164,7 @@ const Pomodoro = ({mode}) => {
     setIsRunning(false);
     setShowReset(false);
     setInitialTotalTime(0);
+    setRemainingTime(0);
   };
 
   const resetAllSessions = () => {
@@ -190,11 +185,13 @@ const Pomodoro = ({mode}) => {
 
   return (
     <div className="relative flex flex-1 w-full h-full">
+      {/* Video Background */}
       <video
         autoPlay
         loop
         muted
         playsInline
+        preload="auto"
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
         src="https://mylivewallpapers.com/wp-content/uploads/Anime/PREVIEW-Guts-Chilling-Rain.mp4"
       />
@@ -204,19 +201,9 @@ const Pomodoro = ({mode}) => {
         <div className="absolute bottom-59 left-56 transform -translate-x-1/2 z-10">
           <ProgressClock 
             totalTime={initialTotalTime}
-            remainingTime={currentRemainingTime}
+            remainingTime={remainingTime}
             mode={mode}
           />
-        </div>
-      )}
-
-      {/* Completed Sessions Display */}
-      {completedSessions > 0 && (
-        <div className={`absolute top-10 right-10 z-10 ${mode ? 'bg-gray-800 text-white' : 'bg-[#d3ecdbea] text-black'} px-4 py-2 rounded-lg border border-black shadow-lg`}>
-          <div className="text-center">
-            <div className="text-sm font-semibold">Flow Sessions Completed</div>
-            <div className="text-2xl font-bold text-green-800">{completedSessions}</div>
-          </div>
         </div>
       )}
 
@@ -227,36 +214,39 @@ const Pomodoro = ({mode}) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
-          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#d3ecdbd7]'} items-center gap-6 justify-between left-10 px-4 py-2 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border border-b-emerald-800  z-10`}
+          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#d3ecdbd7]'} items-center gap-4 justify-between left-10 px-3 py-1 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border border-b-emerald-800  z-10`}
         >
           <input
             type="number"
             value={hours}
             onChange={(e) => setHours(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-20 text-center bg-transparent font-mono text-2xl font-light tracking-wider ${mode ? 'text-white' : 'text-black'}`}
+            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
             placeholder="00"
             min="0"
             max="23"
           />
-          <span className={`font-mono text-2xl font-bold ${mode ? 'text-white' : 'text-black'}`}>:</span>
+          <span className={`font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
           <input
             type="number"
             value={minutes}
             onChange={(e) => setMinutes(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-20 text-center bg-transparent font-mono text-2xl font-light tracking-wider ${mode ? 'text-white' : 'text-black'}`}
+            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
             placeholder="00"
             min="0"
             max="59"
           />
-          <span className={`font-mono text-2xl font-bold ${mode ? 'text-white' : 'text-black'}`}>:</span>
+          <span className={`font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
           <input
             type="number"
             value={seconds}
             onChange={(e) => setSeconds(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-20 text-center bg-transparent font-mono text-2xl font-light tracking-wider ${mode ? 'text-white' : 'text-black'}`}
+            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
             placeholder="00"
             min="0"
             max="59"
@@ -265,11 +255,11 @@ const Pomodoro = ({mode}) => {
       )}
 
       {/* Control Buttons */}
-      <div className="absolute bottom-37 left-56 transform -translate-x-1/2 flex gap-4 z-10">
+      <div className="absolute left-36 bottom-32 flex gap-4 z-10">
         <motion.button
           {...iconMotionProps}
           onClick={handleToggle}
-          className={`px-6 py-2 ml-2 bg-white rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
+          className={`px-3 py-2 bg-white rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
         >
           {isRunning ? "Pause" : "Start"}
         </motion.button>
@@ -278,7 +268,7 @@ const Pomodoro = ({mode}) => {
           <motion.button
             {...iconMotionProps}
             onClick={resetTimer}
-            className={`px-6 ml-4 py-2 rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
+            className={`px-6 py-2 rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
           >
             Reset
           </motion.button>

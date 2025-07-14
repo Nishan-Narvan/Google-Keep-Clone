@@ -14,15 +14,42 @@ export default function App() {
   const [mode, setMode] = useState(false);
   const [lines, setLines] = useState(true);
   
-  const[trashed, setTrashed] = useState([]);
-
-
-
- const [archieved, setArchieved] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [trashed, setTrashed] = useState([]);
+  const [archieved, setArchieved] = useState([]);
   const [archievedtitle, setArchievedtitle] = useState([]);
   const [archieveddesc, setArchieveddesc] = useState([]);
 
+  // Function to restore archived note back to main notes
+  const handleRestoreFromArchive = (note, index) => {
+    // Remove from archived
+    setArchieved((prev) => prev.filter((_, i) => i !== index));
+    // Add back to main notes
+    setNotes((prev) => [...prev, note]);
+  };
 
+  // Function to move archived note to trash
+  const handleDeleteFromArchive = (note, index) => {
+    // Remove from archived
+    setArchieved((prev) => prev.filter((_, i) => i !== index));
+    // Add to trash
+    setTrashed((prev) => [...prev, note]);
+  };
+
+  // Function to restore note from trash back to main notes
+  const handleRestoreFromTrash = (note, index) => {
+    // Remove from trash
+    setTrashed((prev) => prev.filter((_, i) => i !== index));
+    // Add back to main notes
+    setNotes((prev) => [...prev, note]);
+  };
+
+  // Function to delete note permanently from trash
+  const handleDeletePermanentlyFromTrash = (note, index) => {
+    // Remove from trash permanently
+    setTrashed((prev) => prev.filter((_, i) => i !== index));
+    // Note is permanently deleted, no need to add anywhere
+  };
 
   return (
     <BrowserRouter>
@@ -44,10 +71,10 @@ export default function App() {
           <div />
           <div className="relative "/>
           <Routes>
-            <Route path="/" element={<Home mode={mode}  setArchieved={setArchieved}  setTrashed={setTrashed} />} />
+            <Route path="/" element={<Home mode={mode} notes={notes} setNotes={setNotes} setArchieved={setArchieved} setTrashed={setTrashed} />} />
             <Route path="/pomodoro" element={<Pomodoro mode={mode} />} />
-            <Route path="/archive" element={<Archive mode={mode } archieved={archieved}  />} />
-            <Route path="/trash" element={<Trash  trashed={trashed} mode={mode} />} />
+            <Route path="/archive" element={<Archive mode={mode} archieved={archieved} onRestore={handleRestoreFromArchive} onDelete={handleDeleteFromArchive} />} />
+            <Route path="/trash" element={<Trash trashed={trashed} mode={mode} onRestore={handleRestoreFromTrash} onDeletePermanently={handleDeletePermanentlyFromTrash} />} />
             <Route path="/search" element={<Search />} />
             <Route path="*" element={<NoPage />} />
           </Routes>
@@ -61,4 +88,3 @@ export default function App() {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
-djfdskfjdsk

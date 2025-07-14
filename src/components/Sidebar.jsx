@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   MdLightbulbOutline,
   MdTimer,
-  MdLabelOutline,
   MdArchive,
   MdDeleteOutline
 } from "react-icons/md";
@@ -61,17 +60,6 @@ const Sidebar = ({ mode, lines }) => {
           </span>
         )}
       </div>
-       
-      <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
-        <motion.button {...iconMotionProps} className="p-1 bg-transparent border-none outline-none">
-          <MdLabelOutline className="text-lg" />
-        </motion.button>
-         {lines && (
-          <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Edit labels
-          </span>
-        )}
-      </div>
       
       <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
         <motion.button {...iconMotionProps} onClick={redirectArchive} className="p-1 bg-transparent border-none outline-none">
@@ -83,7 +71,6 @@ const Sidebar = ({ mode, lines }) => {
           </span>
         )}
       </div>
-
 
        
       <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
