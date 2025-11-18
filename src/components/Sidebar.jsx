@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { color, motion } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from "react-router-dom";
 import {
   MdLightbulbOutline,
@@ -8,88 +8,73 @@ import {
   MdDeleteOutline
 } from "react-icons/md";
 
-const iconMotionProps = {
-  whileHover: { scale: 1.05, translateY: -10, boxShadow: "6px 6px 0px black", backgroundColor: "#477f5f" },
-  whileTap: { scale: 0.75 },
-  transition: { duration: 0.15 },
-   
-};
-
 const Sidebar = ({ mode, lines }) => {
   const navigate = useNavigate();
-  
-  function redirectTrash() {
-    navigate("/trash");
-  }
-  
-  function redirectArchive() {
-    navigate("/archive");
-  }
-  
-  function redirectNotes() {
-    navigate("/");
+  const collapsed = !lines;
+
+  const items = [
+    { label: "Notes", icon: MdLightbulbOutline, to: "/" },
+    { label: "Focus", icon: MdTimer, to: "/pomodoro" },
+    { label: "Archive", icon: MdArchive, to: "/archive" },
+    { label: "Trash", icon: MdDeleteOutline, to: "/trash" },
+  ];
+
+  const baseText = mode ? "text-white" : "text-black";
+  const panelBg = mode ? "bg-gray-800" : "bg-[#bcd3c3e5]";
+
+  function handleActivate(path) {
+    navigate(path);
   }
 
-    function redirectPomodoro() {
-    navigate("/Pomodoro");
+  function keyActivate(e, path) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleActivate(path);
+    }
   }
-  
+
   return (
-    <div className={`flex relative flex-col gap-5 pr-8 px-5 py-5 h-full ${mode ? 'bg-gray-800' : 'bg-[#bcd3c3e5]'} shadow-md border-r border-solid border-gray-300 transition-all duration-300 ease-in-out ${
-      lines ? 'w-64' : 'w-26'
-    } ${lines? 'pl-6':'pr-6'} `}>
-      
-      <div className={`flex items-center rounded-xl cursor-pointer px-4 py-3 ${lines ? 'shadow-lg border border-gray-300 ' : ''} transition-all duration-150 ease-in-out`}>
-        <motion.button {...iconMotionProps} onClick={redirectNotes} className="p-1 bg-transparent border-none outline-none">
-          <MdLightbulbOutline className="text-lg" />
-        </motion.button>
-         {lines && (
-          <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Notes
-          </span>
-        )}
-      </div>
-      
-      <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
-        <motion.button {...iconMotionProps} onClick={redirectPomodoro} className="p-1 bg-transparent border-none outline-none">
-          <MdTimer className="text-lg" />
-        </motion.button>
-         {lines && (
-          <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Focus
-          </span>
-        )}
-      </div>
-      
-      <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
-        <motion.button {...iconMotionProps} onClick={redirectArchive} className="p-1 bg-transparent border-none outline-none">
-          <MdArchive className="text-lg" />
-        </motion.button>
-         {lines && (
-          <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Archive
-          </span>
-        )}
-      </div>
-
-       
-      <div className={`flex items-center rounded-xl cursor-pointer px-4  py-3 ${lines ? 'shadow-lg border border-gray-300 hover:shadow' : ''} transition-all duration-150 ease-in-out`}>
-        <motion.button {...iconMotionProps} onClick={redirectTrash} className="p-1 bg-transparent border-none outline-none">
-          <MdDeleteOutline className="text-lg" />
-        </motion.button>
-         {lines && (
-          <span className={`ml-4 hover:text-gray-600 transition-opacity duration-300 ${mode ? "text-white" : "text-black"}`}>
-            Trash
-          </span>
-        
-        
-        )}
-
-        <div className="w-full h-6 bg-gradient-to-t from-[#1e3f29] to-transparent absolute bottom-0 left-0 z-10 pointer-events-none" />
-      </div>
-      
-    
-
+    <div
+      className={`relative h-full w-full ${panelBg} transition-all duration-300 ease-in-out
+        ${collapsed ? "px-2 py-4" : "px-5 py-5"}`}
+    >
+      <nav className={`flex flex-col ${collapsed ? "gap-2" : "gap-4"}`}>
+        {items.map(({ label, icon: Icon, to }) => (
+          <motion.div
+            key={label}
+            whileHover={{ scale: collapsed ? 1.06 : 1.02 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleActivate(to)}
+            onKeyDown={(e) => keyActivate(e, to)}
+            role="button"
+            tabIndex={0}
+            className={`group rounded-xl cursor-pointer select-none transition-colors duration-200
+              ${collapsed
+                ? "flex items-center justify-center h-14"
+                : "flex items-center px-4 h-14 shadow-lg"
+              }
+              ${mode ? "hover:bg-gray-700/70" : "hover:bg-green-200/70"}
+            `}
+          >
+            <div
+              className={`flex items-center justify-center rounded-2xl transition-all duration-200
+                ${collapsed ? "h-12 w-12" : "h-11 w-11 mr-4"}
+                ${mode ? "bg-gray-900/40 group-hover:bg-gray-900/70" : "bg-white/60 group-hover:bg-white"}
+                group-hover:shadow-md group-hover:scale-105
+              `}
+            >
+              <Icon
+                className={`${collapsed ? "text-2xl" : "text-xl"} ${baseText} transition-colors duration-200 group-hover:text-red-500`}
+              />
+            </div>
+            {lines && (
+              <span className={`font-medium ${baseText} transition-colors duration-200 group-hover:text-red-600`}>
+                {label}
+              </span>
+            )}
+          </motion.div>
+        ))}
+      </nav>
     </div>
   );
 };

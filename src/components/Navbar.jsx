@@ -170,13 +170,13 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
 
   return (
     <div
-      className={`flex h-16 px-8 items-center shadow-md border-r border-solid border-gray-300 gap-8 justify-between ${
+      className={`flex h-16 px-7 items-center shadow-md border-r border-solid border-gray-300 gap-8 justify-between ${
         mode ? "bg-gray-900" : "bg-[#d4e6dae0]"
       }`}
     >
       {/* Left Navbar */}
-      <div className="flex items-center gap-4 py-4 px-2 cursor-pointer">
-        <div className="px-2 py-2">
+      <div className="flex items-center gap-4 py-4  cursor-pointer">
+        <div className=" py-2">
           <FaBars
             onClick={openLines}
             className={`text-4xl px-2 transition-transform duration-300 ease-in-out rotate-0  ${
