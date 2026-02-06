@@ -1,206 +1,279 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { MdArchive, MdDeleteOutline } from "react-icons/md";
+import { MdArchive, MdDeleteOutline, MdEdit } from "react-icons/md";
+import { notesAPI } from "../utils/api";
+import { useAppContext } from "../context/AppContext";
 
-const NoteInput = ({ mode, notes, setNotes, setArchieved, setTrashed }) => {
-  // notes array is now passed from parent
+const NoteInput = () => {
+  const { mode } = useAppContext();
+  const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState("");
-  // title state
   const [desc, setDesc] = useState("");
-  // desc state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const MotionProps = {
-    whileHover: {
-      scale: 1.05,
-      translateY: -10,
-      boxShadow: "6px 6px 0px black",
-      backgroundColor: "#2F4F4F", // matching green theme
+  // Load notes on mount
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = useCallback(async () => {
+    try {
+      const response = await notesAPI.getAll();
+      if (response.success) {
+        setNotes(response.data.notes || []);
+      }
+    } catch (err) {
+      console.error("Failed to load notes:", err);
+    }
+  }, []);
+
+  const buttonMotionProps = useMemo(
+    () => ({
+      whileHover: { scale: 1.05, translateY: -10, boxShadow: "0px 3px 0px black", backgroundColor: "bg-green-500" },
+      transition: { duration: 0.09, ease: "easeOut" },
+    }),
+    []
+  );
+
+  const createNote = useCallback(async () => {
+    if (!title.trim() && !desc.trim()) {
+      setError("Please enter title or content");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await notesAPI.create(title, desc);
+      if (response.success) {
+        setNotes((prev) => [response.data.note, ...prev]);
+        setTitle("");
+        setDesc("");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to create note");
+    } finally {
+      setLoading(false);
+    }
+  }, [title, desc]);
+
+  const archiveNote = useCallback(
+    async (index, noteId) => {
+      setLoading(true);
+      try {
+        const response = await notesAPI.archive(noteId);
+        if (response.success) {
+          setNotes((prev) => prev.filter((_, i) => i !== index));
+        }
+      } catch (err) {
+        setError(err.message || "Failed to archive note");
+      } finally {
+        setLoading(false);
+      }
     },
-    transition: { duration: 0.3 },
+    []
+  );
+
+  const deleteNote = useCallback(
+    async (index, noteId) => {
+      setLoading(true);
+      try {
+        const response = await notesAPI.trash(noteId);
+        if (response.success) {
+          setNotes((prev) => prev.filter((_, i) => i !== index));
+        }
+      } catch (err) {
+        setError(err.message || "Failed to delete note");
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  // Editing state
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+
+  const startEditing = (note) => {
+    setEditingNoteId(note.id);
+    setEditTitle(note.title || "");
+    setEditContent(note.content || "");
   };
-  
-  // How to add to the notes array using the button:
-  // Check if the value in title and description  states are empty
-  // a object with title and desc as properties is created
-  // the notes array is updated with this new object
-  // again the title and desc states are cleared
-  function handleClick() {
-    if (title.trim() === "" && desc.trim() === "") return;
 
-    const newNote = {
-      title: title.trim(),
-      desc: desc.trim(),
-    };
+  const cancelEditing = () => {
+    setEditingNoteId(null);
+    setEditTitle("");
+    setEditContent("");
+  };
 
-    setNotes((prev) => [...prev, newNote]);
+  const saveEdit = async (index, noteId) => {
+    if (!editTitle.trim() && !editContent.trim()) {
+      setError("Please enter title or content");
+      return;
+    }
 
-    setTitle("");
-    setDesc("");
-  }
-
-  function archieveNote(index) {
-    const noteToArchive = notes[index];
-    setArchieved((prev) => [...prev, noteToArchive]);
-    setNotes((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function deleteNote(index) {
-    const noteToDelete = notes[index];
-    setTrashed((prev) => [...prev, noteToDelete]);
-    setNotes((prev) => prev.filter((_, i) => i !== index));
-  }
+    setLoading(true);
+    try {
+      const response = await notesAPI.update(noteId, editTitle, editContent);
+      if (response.success) {
+        // Update local list
+        setNotes((prev) => prev.map((n) => (n.id === noteId ? response.data.note : n)));
+        cancelEditing();
+      }
+    } catch (err) {
+      setError(err.message || "Failed to update note");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="w-230">
+    <div className="w-full">
+      {/* Create Note Card */}
       <motion.div
-        whileHover={{
-          scale: 1.05,
-          translateY: -10,
-          boxShadow: "0px 6px 0px black",
-        }}
+        whileHover={{ scale: 1.05, translateY: -10, boxShadow: "0px 6px 0px black" }}
         transition={{ duration: 0.3 }}
-        className={`rounded-xl cursor-pointer w-180 ml-15 bg-gradient-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
-                backdrop-blur-sm bg-opacity-50 border border-white/20
-                shadow-lg shadow-[#1a2e1f]/50 ${
-                  mode ? "bg-gray-300" : "bg-[#1e3f29]"
-                }`}
+        className={`rounded-xl  w-full max-w-xl ml-15 bg-linear-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
+          backdrop-blur-sm bg-opacity-50 border border-white/20 shadow-lg shadow-[#1a2e1f]/50 ${
+          mode ? "bg-gray-300" : "bg-[#1e3f29]"
+        }`}
       >
         <div className="ml-6">
           <textarea
-            type="text"
             placeholder="Title"
-            className={`text-3xl hover::border-none focus:outline-none w-full resize-none font-mono ${
-              mode ? "text-black" : "text-black"
-            }`}
+            className="text-3xl hover:border-none focus:outline-none w-full resize-none font-mono"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={loading}
           />
         </div>
 
         <div className="ml-6">
           <textarea
-            type="text"
             placeholder="Take a Note"
-            className="hover::border-none focus:outline-none w-full resize-none font-mono"
+            className="hover:border-none focus:outline-none w-full resize-none font-mono"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
+            disabled={loading}
           />
         </div>
 
-        <div className="flex items-center ml-70 py-5 ">
+        {error && (
+          <div className="ml-6 mb-4 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="flex items-center justify-center py-5 min-h-[3rem]">
           <motion.button
-
-
-
-
-
-
-
-            whileHover={{
-              scale: 1.05,
-              translateY: -10,
-              boxShadow: "6px 6px 0px black",
-              backgroundColor: "bg-[#2F4F4F]",
-            }}
-            whileTap={{ scale: 0.75 }}
+            whileHover={{ scale: 1.08, translateY: -4, boxShadow: "0px 8px 16px rgba(0, 0, 0, 0.3)" }}
+            whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="px-4 py-2 border border-black focus:outline-none rounded-md"
-            onClick={handleClick}
+            className="min-w-[8rem] h-10 flex items-center justify-center px-6 py-2.5 bg-linear-to-br from-[#4d815f] to-[#2F4F4F] text-white font-bold text-lg border-2 border-[#355E3B] focus:outline-none rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 whitespace-nowrap cursor-pointer"
+            onClick={createNote}
+            disabled={loading}
           >
-            Add note
+            {loading ? "..." : "Add note"}
           </motion.button>
         </div>
       </motion.div>
 
+      {/* Notes List */}
       <div
-        className={`cursor-pointer rounded-3xl w-180 ml-15 shadow-sm mt-3 p-1.5 ${
+        className={` rounded-3xl w-full max-w-xl ml-15 shadow-sm mt-3 p-1.5 ${
           mode ? "bg-[#1e3f29]" : "bg-[#4d815f]"
         }`}
       >
-        <ul>
-{/* How to map from the notes array to the div----> unordered list we map the notes array of objects notes.map((note,index)---arrow function to map,there is a list,  key  as index ,  and then there are two divs inside a div, with note.title and note.desc 
-          array.map(callbackFunction)
-
-Breakdown:
-
-array: the array you want to iterate over (in this case, notes)
-callbackFunction: a function that will be called for each element in the array
-callbackFunction takes two arguments:
-element: the current element being processed (in this case, note)
-index: the index of the current element in the array (in this case, index)
-          
-
-const numbers = [1, 2, 3, 4, 5];
-const doubledNumbers = numbers.map((number, index) => {
-  return number * 2;
-});
-console.log(doubledNumbers); // [2, 4, 6, 8, 10]
-
-          
-
-onst notes = [
-  { id: 1, title: 'Note 1' },
-  { id: 2, title: 'Note 2' },
-  { id: 3, title: 'Note 3' },
-];
-
-const NoteList = () => {
-  return (
-    <ul>
-      {notes.map((note, index) => (
-        <li key={index}>{note.title}</li>
-      ))}
-    </ul>
-  );
-};
-          
-Important:
-You are correct, there is no explicit return statement in the map() callback function in this code below.
-
-In this case, the syntax (note, index) => (...) is using a feature of JavaScript called "expression syntax" or "concise body" for arrow functions.
-
-When you use parentheses () around the function body, it's an implicit expression that returns the value of the expression inside the parentheses
-          
-*/}
+        <ul className="space-y-2">
           {notes.map((note, index) => (
-            <li
-              key={index}
-              className={`my-2 p-2 shadow-sm rounded-2xl ${
-                mode ? "bg-[#25353a]" : "bg-[#69796ee5]"
-              }`}
-            >
+            <li key={note.id} className="my-2">
               <motion.div
-                whileHover={{
-                  scale: 1.05,
-                  translateY: -10,
-                  boxShadow: "0px 6px 0px black",
-                }}
+                whileHover={{ scale: 1.05, translateY: -10, boxShadow: "0px 6px 0px black" }}
                 transition={{ duration: 0.16 }}
-                className={`items-center  cursor-pointer w-173  bg-gradient-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
-                backdrop-blur-sm bg-opacity-50 border border-white/20
-                shadow-lg shadow-[#1a2e1f]/50   rounded-2xl ${
-                  mode ? "bg-[#e9ecf0]" : "bg-[#1e3f29] "
+                className={`w-full bg-linear-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
+                  backdrop-blur-sm bg-opacity-50 border border-white/20 shadow-lg shadow-[#1a2e1f]/50 rounded-2xl p-0 ${
+                  mode ? "bg-[#e9ecf0]" : "bg-[#1c93e2]"
                 }`}
               >
-                <div className="text-3xl font-mono text-gray-800">
-                  {" "}
-                  • {note.title}
-                </div>
-                <span className="text-black ml-10">{note.desc}</span>
-                <div className="ml-142 flex space-x-2">
-                  <motion.button onClick={() =>archieveNote(index)}
-                    {...MotionProps}
-                    className="p-1 bg-transparent border-none outline-none"
-                  >
-                    <MdArchive className="text-lg" />
-                  </motion.button>
-                  <motion.button onClick={() =>deleteNote(index)}
-                    {...MotionProps}
-                    className="p-1 bg-transparent border-none outline-none place-items-end"
-                  >
-                    <MdDeleteOutline className="text-lg" />
-                  </motion.button>
-                </div>
+                {editingNoteId === note.id ? (
+                  <div className="p-4 w-full">
+                    <input
+                      className="w-full text-2xl font-mono mb-2 p-1 rounded focus:outline-none"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Title"
+                    />
+                    <textarea
+                      className="w-full resize-none p-1 rounded focus:outline-none"
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      placeholder="Content"
+                      rows={3}
+                    />
+                    <div className="mt-2 flex gap-3">
+                      <motion.button
+                        {...buttonMotionProps}
+                        onClick={() => saveEdit(index, note.id)}
+                        className="min-w-[4rem] h-10 cursor-pointer flex items-center justify-center px-4 bg-linear-to-br from-[#4d815f] to-[#2F4F4F] text-white font-bold text-md border-2 border-[#355E3B] focus:outline-none rounded-lg shadow-lg hover:shadow-xl transition-all transform-0.5 disabled:opacity-50 whitespace-nowrap"
+                        disabled={loading}
+                      >
+                        {loading ? "Saving..." : "Save"}
+                      </motion.button>
+
+                      <motion.button
+                        {...buttonMotionProps}
+                        onClick={cancelEditing}
+                        className="min-w-[4rem] h-10 flex cursor-pointer items-center justify-center px-4 bg-white/70 text-black font-bold text-md border-2 border-[#cfcfcf]  transform-0.5 focus:outline-none rounded-lg shadow-sm disabled:opacity-50 whitespace-nowrap"
+                        disabled={loading}
+                      >
+                        Cancel
+                      </motion.button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between p-4">
+                    <div className="flex-1 pr-4">
+                      <div className="text-3xl font-mono text-black/50">• {note.title}</div>
+                      <div className="text-base mt-1 text-black/90">{note.content}</div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <motion.button
+                        type="button"
+                        onClick={() => startEditing(note)}
+                        {...buttonMotionProps}
+                        className="p-2 bg-transparent cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 text-white"
+                        title="Edit note"
+                      >
+                        <MdEdit className="text-xl" />
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => archiveNote(index, note.id)}
+                        {...buttonMotionProps}
+                        className="p-2 bg-transparent cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        <MdArchive className="text-xl" />
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => deleteNote(index, note.id)}
+                        {...buttonMotionProps}
+                        className="p-2 bg-transparent text-red-400 cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        <MdDeleteOutline className="text-xl" />
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </li>
           ))}

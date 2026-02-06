@@ -1,14 +1,24 @@
-import { useState, useEffect } from "react";
-import { FaBars, FaSearch, FaMoon, FaLightbulb, FaVolumeUp, FaPlay, FaPause, FaMusic, FaStop } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaBars, FaMoon, FaLightbulb, FaVolumeUp, FaPlay, FaPause, FaMusic, FaStop, FaPalette, FaCloudRain, FaFireAlt, FaLeaf, FaCoffee } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import logo from "../public/assets/logo.png";
+import { useAppContext } from "../context/AppContext";
 
-const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery }) => {
-  const [currentSound, setCurrentSound] = useState(null);
-  const [audio, setAudio] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+const Navbar = () => {
+  const {
+    mode,
+    lines,
+    toggleMode,
+    toggleSidebar,
+    bgImage,
+    setBackground,
+  } = useAppContext();
+  const [playingSounds, setPlayingSounds] = useState(new Set());
   const [showSoundMenu, setShowSoundMenu] = useState(false);
-
+  const [showBgDialog, setShowBgDialog] = useState(false);
+  const [bgInput, setBgInput] = useState("");
+  
+  const audioInstancesRef = useRef(new Map()); // Map of soundType -> Audio instance
   const navigate = useNavigate();
   
   // Close sound menu when clicking outside
@@ -28,11 +38,12 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
-      if (audio) {
+      audioInstancesRef.current.forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
         audio.src = '';
-      }
+      });
+      audioInstancesRef.current.clear();
     };
   }, []);
 
@@ -41,55 +52,51 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
   }
 
   const setToggle = () => {
-    setMode((prev) => !prev);
+    toggleMode();
   };
 
   const openLines = () => {
-    setLines((prev) => !prev);
+    toggleSidebar();
   };
 
-  const stopCurrentSound = () => {
-    if (audio) {
-      console.log('Stopping current audio');
+  const stopAllSounds = () => {
+    console.log('Stopping all sounds');
+    audioInstancesRef.current.forEach((audio, soundType) => {
       audio.pause();
       audio.currentTime = 0;
-      setAudio(null);
-      setCurrentSound(null);
-      setIsPlaying(false);
+      audio.src = '';
+    });
+    audioInstancesRef.current.clear();
+    setPlayingSounds(new Set());
+  };
+
+  const stopSound = (soundType) => {
+    const audio = audioInstancesRef.current.get(soundType);
+    if (audio) {
+      console.log('Stopping sound:', soundType);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      audioInstancesRef.current.delete(soundType);
+      setPlayingSounds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(soundType);
+        return newSet;
+      });
     }
   };
 
   const playSound = (soundType) => {
     console.log('=== SOUND DEBUG ===');
     console.log('Button clicked for:', soundType);
-    console.log('Current state:', { 
-      currentSound, 
-      isPlaying, 
-      audio: !!audio
-    });
+    console.log('Currently playing:', Array.from(playingSounds));
     
-    // If clicking the same sound that's currently playing, stop it
-    if (currentSound === soundType && audio && isPlaying) {
-      console.log('Stopping current sound');
-      stopCurrentSound();
+    // If this sound is already playing, stop it
+    if (playingSounds.has(soundType)) {
+      console.log('Stopping sound:', soundType);
+      stopSound(soundType);
       return;
     }
-
-    // If clicking the same sound that's paused, resume it
-    if (currentSound === soundType && audio && !isPlaying) {
-      console.log('Resuming paused sound');
-      audio.play().then(() => {
-        console.log('Audio resumed successfully');
-        setIsPlaying(true);
-      }).catch(err => {
-        console.log("Audio resume failed:", err);
-        stopCurrentSound();
-      });
-      return;
-    }
-
-    // Stop any currently playing sound
-    stopCurrentSound();
 
     console.log('Starting new sound:', soundType);
 
@@ -106,41 +113,13 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
     newAudio.volume = 0.3;
     newAudio.preload = 'auto';
     
-    // Add event listeners for state management
-    newAudio.addEventListener('play', () => {
-      console.log('Audio play event for:', soundType);
-      setIsPlaying(true);
-    });
-    
-    newAudio.addEventListener('pause', () => {
-      console.log('Audio pause event for:', soundType);
-      setIsPlaying(false);
-    });
-    
-    newAudio.addEventListener('ended', () => {
-      console.log('Audio ended for:', soundType);
-      // This shouldn't happen with loop=true, but just in case
-      setIsPlaying(false);
-    });
-    
-    newAudio.addEventListener('error', (e) => {
-      console.log('Audio error for', soundType, ':', e);
-      alert(`Could not load ${soundType} sound. Please check if the audio file exists at: ${soundUrls[soundType]}`);
-      stopCurrentSound();
-    });
-
-    newAudio.addEventListener('loadeddata', () => {
-      console.log('Audio data loaded for:', soundType);
-    });
-    
-    // Set the new audio state
-    setAudio(newAudio);
-    setCurrentSound(soundType);
+    // Store in Map
+    audioInstancesRef.current.set(soundType, newAudio);
     
     // Try to play the audio
     newAudio.play().then(() => {
       console.log('Audio started playing successfully for:', soundType);
-      setIsPlaying(true);
+      setPlayingSounds(prev => new Set([...prev, soundType]));
     }).catch(err => {
       console.log("Audio play failed for", soundType, ":", err);
       console.log("Error details:", err.message);
@@ -152,7 +131,7 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
         alert(`Could not play ${soundType} sound. Error: ${err.message}`);
       }
       
-      stopCurrentSound();
+      stopSound(soundType);
     });
   };
 
@@ -160,10 +139,20 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
     setShowSoundMenu(!showSoundMenu);
   };
 
+  const isValidUrl = (url) => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch (e) {
+      return false;
+    }
+  };
+
   // Helper function to get the correct icon for each sound button
   const getSoundIcon = (soundType) => {
-    if (currentSound === soundType) {
-      return isPlaying ? <FaPause className="text-xs" /> : <FaPlay className="text-xs" />;
+    if (playingSounds.has(soundType)) {
+      return <FaPause className="text-xs" />;
     }
     return <FaPlay className="text-xs" />;
   };
@@ -185,7 +174,7 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
           />
         </div>
         <img
-          className="w-8 h-8 rounded-xl  text-3xl"
+          className="w-8 h-8 rounded-xl text-3xl"
           src={logo}
           alt="Google Keep Logo"
         />
@@ -206,40 +195,36 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
         <div className="relative sound-menu-container">
           <button
             onClick={toggleSoundMenu}
-            className={`relative h-8 w-8 border border-gray-500 rounded-full shadow-md flex items-center justify-center transition-all duration-200 ${
-              mode 
-                ? 'bg-green-900 hover:bg-green-800' 
-                : 'bg-green-400 hover:bg-green-500'
-            } ${
-              currentSound && isPlaying ? 'ring-2 ring-green-500' : ''
+            className={`relative h-8 w-8 rounded-full shadow-md flex items-center justify-center transition-all duration-300 ${
+              playingSounds.size > 0
+                ? mode
+                  ? 'bg-[#1F2939] hover:bg-[#243249] ring-2 ring-[#1F2939]'
+                  : 'bg-[#AABDB0] hover:bg-[#98b3a1] ring-2 ring-[#7fa08d]'
+                : mode
+                  ? 'bg-gray-700 hover:bg-gray-600'
+                  : 'bg-gray-200 hover:bg-gray-300'
             }`}
+            title={playingSounds.size > 0 ? `Playing: ${Array.from(playingSounds).join(', ')}` : "Ambient Sounds"}
           >
-            <span className="mr-1 text-lg" style={{ filter: 'brightness(0) invert(1)' }}>🎵</span>
-            {currentSound && isPlaying ? (
-              <FaVolumeUp
-                className={`text-lg transition-all duration-300 ease-in-out text-green-500`}
-              />
+            {playingSounds.size > 0 ? (
+              <FaVolumeUp className="text-white text-sm" />
             ) : (
-              <FaMusic
-                className={`text-lg transition-all duration-300 ease-in-out ${
-                  mode ? "text-gray-300" : "text-gray-700"
-                }`}
-              />
+              <FaMusic className={`text-sm ${mode ? 'text-gray-900' : 'text-black'}`} />
             )}
           </button>
 
           {/* Dropdown Menu */}
           {showSoundMenu && (
-            <div className={`absolute top-10 right-0 w-20 rounded-lg shadow-lg border z-50 ${
-              mode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
+            <div className={`absolute top-10 right-0 w-40 rounded-lg shadow-lg border z-50 overflow-hidden ${
+              mode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
             }`}>
-              <div className="py-2 space-y-1">
+              <div className="divide-y divide-gray-200/40">
                 {/* Stop All Button */}
-                {currentSound && (
+                {playingSounds.size > 0 && (
                   <button
-                    onClick={stopCurrentSound}
-                    className={`w-full h-8 flex items-center justify-center transition-colors border-b ${
-                      mode ? 'text-red-400 hover:bg-gray-700 border-gray-600' : 'text-red-500 hover:bg-gray-100 border-gray-200'
+                    onClick={stopAllSounds}
+                    className={`w-full h-10 flex items-center justify-center transition-colors text-sm font-medium ${
+                      mode ? 'text-red-400 hover:bg-gray-800' : 'text-red-600 hover:bg-gray-50'
                     }`}
                     title="Stop All"
                   >
@@ -249,62 +234,66 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
                 
                 <button
                   onClick={() => playSound('rain')}
-                  className={`w-full h-8 flex items-center justify-center transition-colors ${
-                    currentSound === 'rain' 
-                      ? 'bg-blue-500 text-white' 
-                      : mode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'
+                  className={`w-full h-10 px-3 flex items-center justify-between transition-colors text-sm ${
+                    playingSounds.has('rain') 
+                      ? mode ? 'bg-[#1F2939] text-white' : 'bg-[#AABDB0] text-gray-900' 
+                      : mode ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                   title="Rain"
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">🌧️</span>
-                    {getSoundIcon('rain')}
+                  <div className="flex items-center gap-2">
+                    <FaCloudRain className={`${playingSounds.has('rain') ? 'text-current' : 'text-gray-400'} text-base`} />
+                    <span>Rain</span>
                   </div>
+                  {getSoundIcon('rain')}
                 </button>
                 
                 <button
                   onClick={() => playSound('fire')}
-                  className={`w-full h-8 flex items-center justify-center transition-colors ${
-                    currentSound === 'fire' 
-                      ? 'bg-orange-500 text-white' 
-                      : mode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'
+                  className={`w-full h-10 px-3 flex items-center justify-between transition-colors text-sm ${
+                    playingSounds.has('fire') 
+                      ? mode ? 'bg-[#1F2939] text-white' : 'bg-[#AABDB0] text-gray-900' 
+                      : mode ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                   title="Fireplace"
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">🔥</span>
-                    {getSoundIcon('fire')}
+                  <div className="flex items-center gap-2">
+                    <FaFireAlt className={`${playingSounds.has('fire') ? 'text-current' : 'text-gray-400'} text-base`} />
+                    <span>Fireplace</span>
                   </div>
+                  {getSoundIcon('fire')}
                 </button>
                 
                 <button
                   onClick={() => playSound('spring')}
-                  className={`w-full h-8 flex items-center justify-center transition-colors ${
-                    currentSound === 'spring' 
-                      ? 'bg-green-500 text-white' 
-                      : mode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'
+                  className={`w-full h-10 px-3 flex items-center justify-between transition-colors text-sm ${
+                    playingSounds.has('spring') 
+                      ? mode ? 'bg-[#1F2939] text-white' : 'bg-[#AABDB0] text-gray-900' 
+                      : mode ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                   title="Spring Weather"
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">🌸</span>
-                    {getSoundIcon('spring')}
+                  <div className="flex items-center gap-2">
+                    <FaLeaf className={`${playingSounds.has('spring') ? 'text-current' : 'text-gray-400'} text-base`} />
+                    <span>Spring</span>
                   </div>
+                  {getSoundIcon('spring')}
                 </button>
                 
                 <button
                   onClick={() => playSound('cafe')}
-                  className={`w-full h-8 flex items-center justify-center transition-colors ${
-                    currentSound === 'cafe' 
-                      ? 'bg-yellow-500 text-white' 
-                      : mode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'
+                  className={`w-full h-10 px-3 flex items-center justify-between transition-colors text-sm ${
+                    playingSounds.has('cafe') 
+                      ? mode ? 'bg-[#1F2939] text-white' : 'bg-[#AABDB0] text-gray-900' 
+                      : mode ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                   title="Cafe"
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">☕</span>
-                    {getSoundIcon('cafe')}
+                  <div className="flex items-center gap-2">
+                    <FaCoffee className={`${playingSounds.has('cafe') ? 'text-current' : 'text-gray-400'} text-base`} />
+                    <span>Café</span>
                   </div>
+                  {getSoundIcon('cafe')}
                 </button>
               </div>
             </div>
@@ -325,6 +314,116 @@ const Navbar = ({ mode, setMode, lines, setLines, searchQuery, setSearchQuery })
               className="cursor-pointer shadow-lg text-white hover:text-gray-200 text-lg"
             />
           </div>
+        </div>
+
+        {/* Background Changer Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowBgDialog(true)}
+            className={`h-8 w-8 shadow-md rounded-full flex items-center justify-center hover:shadow-lg transition-all duration-300 ${
+              bgImage
+                ? mode
+                  ? 'bg-[#1F2939] hover:bg-[#243249] ring-2 ring-[#1F2939]'
+                  : 'bg-[#1F402B] hover:bg-[#98b3a1] ring-2 ring-[#7fa08d]'
+                : mode
+                  ? 'bg-gray-700 hover:bg-gray-600'
+                  : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            title="Change Background Image"
+          >
+            <FaPalette className={`text-base ${bgImage ? 'text-white' : mode ? 'text-gray-300' : 'text-gray-600'}`} />
+          </button>
+
+          {/* Background Dialog */}
+          {showBgDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+              <div className={`rounded-2xl p-6 w-full max-w-md shadow-2xl border ${mode ? 'text-white border-gray-800' : 'text-gray-900 border-gray-200'}`}
+                   style={{ background: mode ? '#1F2939' : '#AABDB0' }}>
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Background image</h2>
+                    <p className={`text-sm mt-1 ${mode ? 'text-gray-400' : 'text-gray-500'}`}>Paste an image or GIF URL.</p>
+                  </div>
+                  <button
+                    onClick={() => { setShowBgDialog(false); setBgInput(''); }}
+                    className={`h-9 w-9 flex items-center justify-center rounded-full border transition cursor-pointer ${
+                      mode
+                        ? 'border-gray-700 text-gray-300 bg-[#114234] hover:bg-[#09221b] hover:text-white'
+                        : 'border-gray-300 text-white bg-[#9fc4aa] hover:bg-[#12503e] hover:text-white'
+                    }`}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="-mt-1 -ml-1">
+                    
+                    <input
+                      type="url"
+                      value={bgInput}
+                      onChange={(e) => setBgInput(e.target.value.trim())}
+                      placeholder="https://example.com/wallpaper.gif"
+                      className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                        mode
+                          ? "bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+                          : "bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-500"
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    />
+                    {!bgInput ? null : isValidUrl(bgInput) ? (
+                      <p className={`mt-3  text-xs ${mode ? 'text-green-600' : 'text-black'}`}>Looks good.</p>
+                    ) : (
+                      <p className="mt-3  text-xs text-red-400">Enter a valid http/https image link.</p>
+                    )}
+                  </div>
+
+                  {isValidUrl(bgInput) && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Preview</p>
+                      <div
+                        className={`w-full h-32 rounded-xl bg-cover bg-center  border ${mode ? 'border-gray-700' : 'border-gray-200'}`}
+                        style={{ backgroundImage: `url('${bgInput}')` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!isValidUrl(bgInput)) return;
+                      setBackground(bgInput);
+                      setShowBgDialog(false);
+                      setBgInput('');
+                    }}
+                    className={`flex-1 rounded-lg py-2 cursor-pointer transition-all transform-0.5 font-medium text-white ${isValidUrl(bgInput) ? 'bg-[#185744] hover:bg-[#0b2e24]' : 'bg-gray-400 cursor-not-allowed'}`}
+                    disabled={!isValidUrl(bgInput)}
+                  >
+                    Apply
+                  </button>
+                  {bgImage && (
+                    <button
+                      onClick={() => {
+                        setBackground('');
+                        setShowBgDialog(false);
+                        setBgInput('');
+                      }}
+                      className="flex-1 rounded-lg cursor-pointer py-2 font-medium transition-all transform-0.5 text-white/80 bg-red-500 hover:bg-red-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setShowBgDialog(false); setBgInput(''); }}
+                    className={`flex-1 rounded-lg py-2 cursor-pointer transition-all transform-0.5 font-medium ${mode ? 'bg-gray-600 text-gray-200 hover:bg-gray-900' : 'bg-gray-600 text-white/90 hover:bg-gray-800'}`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

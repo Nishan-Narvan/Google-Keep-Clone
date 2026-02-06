@@ -1,104 +1,271 @@
-import React from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { MdDeleteOutline } from "react-icons/md";
+import { MdDeleteOutline, MdEdit } from "react-icons/md";
 import { LuArchiveRestore } from "react-icons/lu";
+import { notesAPI } from "../utils/api";
+import { useAppContext } from "../context/AppContext";
 
-// Define motion properties
-const iconMotionProps = {
-  whileHover: { scale: 1.05, translateY: -10, boxShadow: "6px 6px 0px black"},
-  whileTap: { scale: 0.75 },
-  transition: { duration: 0.25 },
-};
+const Archive = () => {
+  const { mode, bgImage } = useAppContext();
+  const [archived, setArchived] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
-const Archive = ({ mode, archieved, onRestore, onDelete }) => {
+  // Shared button animation props
+  const buttonMotionProps = useMemo(
+    () => ({
+      whileHover: { scale: 1.05, translateY: -10, boxShadow: "0px 3px 0px black" },
+      transition: { duration: 0.09, ease: "easeOut" },
+    }),
+    []
+  );
+
+  // Shared note card animation
+  const noteMotionProps = useMemo(
+    () => ({
+      whileHover: { scale: 1.02, translateY: -10, boxShadow: "0px 6px 0px black" },
+      transition: { duration: 0.16 },
+    }),
+    []
+  );
+
+  // API calls
+  const loadArchived = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await notesAPI.getArchived();
+      setArchived(response.success ? response.data.notes || [] : []);
+    } catch (err) {
+      setError(err.message || "Failed to load archived notes");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Edit handlers
+  const startEditing = (note) => {
+    setEditingNoteId(note.id);
+    setEditTitle(note.title || "");
+    setEditContent(note.content || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingNoteId(null);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const saveEdit = useCallback(
+    async (noteId) => {
+      if (!editTitle.trim() && !editContent.trim()) {
+        setError("Please enter title or content");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+      try {
+        const response = await notesAPI.update(noteId, editTitle, editContent);
+        if (response.success) {
+          setArchived((prev) => prev.map((n) => (n.id === noteId ? response.data.note : n)));
+          cancelEditing();
+        }
+      } catch (err) {
+        setError(err.message || "Failed to update note");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [editTitle, editContent]
+  );
+
+  const handleRestore = useCallback(async (noteId) => {
+    setLoading(true);
+    try {
+      await notesAPI.unarchive(noteId);
+      setArchived((prev) => prev.filter((note) => note.id !== noteId));
+    } catch (err) {
+      setError(err.message || "Failed to restore note");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleDeleteToTrash = useCallback(async (noteId) => {
+    setLoading(true);
+    try {
+      await notesAPI.trash(noteId);
+      setArchived((prev) => prev.filter((note) => note.id !== noteId));
+    } catch (err) {
+      setError(err.message || "Failed to move note to trash");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Background
+  const bgUrl = useMemo(
+    () =>
+      bgImage ||
+      (mode
+        ? "https://i.pinimg.com/originals/0b/e7/48/0be748204b77ec2211c3230442e468a9.gif"
+        : "https://i.pinimg.com/originals/be/63/08/be63089e483cb06b226f6976723f5e5f.gif"),
+    [mode, bgImage]
+  );
+
+  // Edit mode JSX
+  const editUI = (
+    <div className="p-4 w-full">
+      <input
+        className="w-full text-2xl font-mono mb-2 p-1 rounded focus:outline-none"
+        value={editTitle}
+        onChange={(e) => setEditTitle(e.target.value)}
+        placeholder="Title"
+      />
+      <textarea
+        className="w-full resize-none p-1 rounded focus:outline-none"
+        value={editContent}
+        onChange={(e) => setEditContent(e.target.value)}
+        placeholder="Content"
+        rows={3}
+      />
+      <div className="mt-2 flex gap-3">
+        <motion.button
+          {...buttonMotionProps}
+          onClick={() => saveEdit(editingNoteId)}
+          className="min-w-[4rem] h-10 cursor-pointer flex items-center justify-center px-4 bg-linear-to-br from-[#4d815f] to-[#2F4F4F] text-white font-bold text-md border-2 border-[#355E3B] focus:outline-none rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 whitespace-nowrap"
+          disabled={loading}
+        >
+          {loading ? "Saving..." : "Save"}
+        </motion.button>
+
+        <motion.button
+          {...buttonMotionProps}
+          onClick={cancelEditing}
+          className="min-w-[4rem] h-10 flex cursor-pointer items-center justify-center px-4 bg-white/70 text-black font-bold text-md border-2 border-[#cfcfcf] focus:outline-none rounded-lg shadow-sm disabled:opacity-50 whitespace-nowrap"
+          disabled={loading}
+        >
+          Cancel
+        </motion.button>
+      </div>
+    </div>
+  );
+
+  // View mode JSX
+  const viewUI = (note) => (
+    <div className="flex items-start justify-between p-4">
+      <div className="flex-1 pr-4">
+        <div className="text-3xl font-mono text-black/50">• {note.title}</div>
+        <div className="text-base mt-1 text-black/90">{note.content}</div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <motion.button
+          type="button"
+          onClick={() => startEditing(note)}
+          {...buttonMotionProps}
+          className="p-2 bg-transparent cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 text-white"
+          title="Edit note"
+        >
+          <MdEdit className="text-xl" />
+        </motion.button>
+
+        <motion.button
+          type="button"
+          {...buttonMotionProps}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRestore(note.id);
+          }}
+          className="p-2 bg-transparent cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 text-white"
+          title="Restore to notes"
+          disabled={loading}
+        >
+          <LuArchiveRestore className="text-xl text-green-400/90" />
+        </motion.button>
+
+        <motion.button
+          type="button"
+          {...buttonMotionProps}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteToTrash(note.id);
+          }}
+          className="p-2 bg-transparent text-red-400 cursor-pointer border-none outline-none hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+          title="Move to trash"
+          disabled={loading}
+        >
+          <MdDeleteOutline className="text-xl" />
+        </motion.button>
+      </div>
+    </div>
+  );
+
+  // Empty state JSX
+  const emptyUI = (
+    <div className="flex flex-col items-center justify-center p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`text-center ${mode ? "text-gray-200" : "text-gray-800"}`}
+      >
+        <div className="text-xl font-semibold mb-2">No archived notes</div>
+        <div className="text-sm opacity-75">Your archived notes will appear here</div>
+      </motion.div>
+    </div>
+  );
+
+  useEffect(() => {
+    loadArchived();
+  }, [loadArchived]);
+
   return (
-    <div className={`flex relative flex-1 w-full h-full justify-center ${mode ? "" : ""}`}>
-      <img 
-        src={mode ? 
-          "https://i.pinimg.com/originals/0b/e7/48/0be748204b77ec2211c3230442e468a9.gif" : 
-          "https://i.pinimg.com/originals/be/63/08/be63089e483cb06b226f6976723f5e5f.gif"
-        }  
+    <div className="flex relative flex-1 w-full h-full justify-center items-start">
+      <img
+        src={bgUrl}
         className="absolute z-0 object-cover w-full h-full"
         alt="Background"
       />
-      
-      <div className={`relative z-10 cursor-pointer rounded-3xl w-fit shadow-sm mt-8 p-1.5 px-4 ${
-          mode ? "bg-gray-800" : "bg-[#b1d6bcc2]"
-        }`}
-        style={{ height: 'fit-content', minHeight: '100px' }}
-      >
-        {archieved.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className={`text-center ${mode ? "text-gray-300" : "text-gray-700"}`}
-            >
-              <div className="text-xl font-semibold mb-2">No archived notes</div>
-              <div className="text-sm opacity-75">Your archived notes will appear here</div>
-            </motion.div>
-          </div>
-        ) : (
-          <ul>
-            {archieved.map((note, index) => (
-              <li
-                key={index}
-                className={`my-2 p-2 shadow-sm rounded-2xl ${
-                  mode ? "bg-[#4d815f]" : "bg-[#4d815f]"
-                }`}
-              >
-                <motion.div
-                  whileHover={{
-                    scale: 1.05,
-                    translateY: -10,
-                    boxShadow: "0px 7px 0px black",
-                  }}
-                  transition={{ duration: 0.3 }}
-                  className={`items-center cursor-pointer w-173 bg-gradient-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
-                    backdrop-blur-sm bg-opacity-50 border border-white/20
-                    shadow-lg shadow-[#1a2e1f]/50 rounded-2xl ${
-                      mode ? "bg-[#e9ecf0]" : "bg-teal-200"
-                    }`}
-                >
-                  <div className="text-3xl font-mono text-gray-800">
-                    • {note.title}
-                  </div>
-                  <span className="text-black ml-10">{note.desc}</span>
-                  <div className="ml-138 mb-3 mr-4 flex space-x-2">
-                    {/* Restore Icon */}
-                    <motion.button
-                      {...iconMotionProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRestore && onRestore(note, index);
-                      }}
-                      className="p-1 bg-transparent border-none outline-none pr-3 hover:bg-green-500/20 rounded"
-                      title="Restore to notes"
-                    >
-                      <LuArchiveRestore className="text-lg text-green-600" />
-                    </motion.button>
-                   
-                    {/* Delete Icon */}
-                    <motion.button
-                      {...iconMotionProps}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete && onDelete(note, index);
-                      }}
-                      className="p-1 bg-transparent border-none outline-none hover:bg-red-500/20 rounded"
-                      title="Delete permanently"
-                    >
-                      <MdDeleteOutline className="text-lg text-green-600" />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </li>
-            ))}
-          </ul>
-        )}
+
+      <div className="w-full flex justify-center px-4 mt-8">
+        <div
+          className={`rounded-3xl w-full max-w-xl ml-15 shadow-sm mt-3 p-1.5 ${
+            mode ? "bg-[#1e3f29]" : "bg-[#4d815f]"
+          }`}
+        >
+          {error && (
+            <div className="mb-3 text-sm text-red-500 font-semibold">{error}</div>
+          )}
+          {loading && archived.length === 0 ? (
+            <div className="p-6 text-center text-gray-200">Loading archived notes...</div>
+          ) : archived.length === 0 ? (
+            emptyUI
+          ) : (
+            <ul className="space-y-2">
+              {archived.map((note) => (
+                <li key={note.id} className="my-2">
+                  <motion.div
+                    {...noteMotionProps}
+                    className={`w-full bg-linear-to-br from-[#74c29b] via-[#355E3B] to-[#2F4F4F]
+                      backdrop-blur-sm bg-opacity-50 border border-white/20 shadow-lg shadow-[#1a2e1f]/50 rounded-2xl p-0 ${
+                        mode ? "bg-[#e9ecf0]" : "bg-[#1c93e2]"
+                      }`}
+                  >
+                    {editingNoteId === note.id ? editUI : viewUI(note)}
+                  </motion.div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
 export default Archive;

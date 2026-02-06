@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { FaHourglassHalf } from "react-icons/fa";
+import { useAppContext } from "../context/AppContext";
 
 const iconMotionProps = {
   whileHover: {
     scale: 1.05,
     translateY: -10,
-    boxShadow: "6px 6px 0px black",
+    boxShadow: "0px 6px 0px black",
     backgroundColor: "#477f5f",
-    focus: { outline: "none" },
   },
   whileTap: { scale: 1 },
   transition: { duration: 0.25 },
@@ -16,7 +16,7 @@ const iconMotionProps = {
 
 // Circular Progress Clock Component
 const ProgressClock = ({ totalTime, remainingTime, mode }) => {
-  const radius = 150;
+  const radius = 250;
   const strokeWidth = 16;
   const normalizedRadius = radius - strokeWidth * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
@@ -51,7 +51,7 @@ const ProgressClock = ({ totalTime, remainingTime, mode }) => {
         >
           {/* Background circle */}
           <circle
-            stroke={mode ? "#9ca3af" : "#c2d6c8"}
+            stroke="#5a5a5a" /* muted steel for background ring */
             fill="transparent"
             strokeWidth={strokeWidth}
             r={normalizedRadius}
@@ -60,7 +60,7 @@ const ProgressClock = ({ totalTime, remainingTime, mode }) => {
           />
           {/* Progress circle */}
           <circle
-            stroke="#285639"
+            stroke="#1f1f1f" /* deep charcoal for progress arc */
             fill="transparent"
             strokeWidth={strokeWidth}
             strokeDasharray={strokeDasharray}
@@ -83,6 +83,7 @@ const ProgressClock = ({ totalTime, remainingTime, mode }) => {
 };
 
 const Pomodoro = ({mode}) => {
+  const { addFocusedTime } = useAppContext();
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
@@ -91,8 +92,12 @@ const Pomodoro = ({mode}) => {
   const [initialTotalTime, setInitialTotalTime] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
+  const [isBerserkPlaying, setIsBerserkPlaying] = useState(false);
 
   const intervalRef = useRef(null);
+  const berserkAudioRef = useRef(null);
+  const initialTotalTimeRef = useRef(0);
+  const completionRef = useRef(false);
 
   const totalSeconds = () => hours * 3600 + minutes * 60 + seconds;
 
@@ -108,9 +113,16 @@ const Pomodoro = ({mode}) => {
     // Store initial time when starting
     if (!showReset) {
       const total = totalSeconds();
+      initialTotalTimeRef.current = total;
       setInitialTotalTime(total);
       setRemainingTime(total);
+    } else if (initialTotalTimeRef.current === 0) {
+      // Safety: ensure ref mirrors state when resuming after a pause
+      const total = initialTotalTime || totalSeconds();
+      initialTotalTimeRef.current = total;
     }
+
+    completionRef.current = false;
 
     setIsRunning(true);
     setShowReset(true);
@@ -120,14 +132,20 @@ const Pomodoro = ({mode}) => {
         const newTime = prev - 1;
         
         if (newTime <= 0) {
+          if (completionRef.current) return 0;
+          completionRef.current = true;
           clearInterval(intervalRef.current);
           setIsRunning(false);
           setShowReset(true);
           
           // Show completion alert and update completed sessions
-          const completedMinutes = Math.round(initialTotalTime / 60);
+          const completedMinutes = Math.max(1, Math.round(initialTotalTimeRef.current / 60));
           setCompletedSessions(prev => prev + 1);
-          alert(`🎉 Congratulations! You have completed ${completedMinutes} minutes of flow!`);
+          
+          // Add focused time to context
+          addFocusedTime(initialTotalTimeRef.current);
+          
+          alert(`🎉 Congratulations! You have completed the timer!`);
           
           // Reset inputs to zero
           setTimeout(() => {
@@ -165,6 +183,8 @@ const Pomodoro = ({mode}) => {
     setShowReset(false);
     setInitialTotalTime(0);
     setRemainingTime(0);
+    initialTotalTimeRef.current = 0;
+    completionRef.current = false;
   };
 
   const resetAllSessions = () => {
@@ -172,8 +192,55 @@ const Pomodoro = ({mode}) => {
   };
 
   useEffect(() => {
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      if (berserkAudioRef.current) {
+        berserkAudioRef.current.pause();
+        berserkAudioRef.current.src = "";
+      }
+    };
   }, []);
+
+  const toggleBerserkTheme = () => {
+    // If audio is already initialized, just toggle play/pause
+    if (berserkAudioRef.current) {
+      const audio = berserkAudioRef.current;
+      
+      if (isBerserkPlaying) {
+        audio.pause();
+        audio.currentTime = 0;
+        setIsBerserkPlaying(false);
+      } else {
+        audio.currentTime = 0;
+        audio.play().then(() => {
+          console.log("Audio playing");
+          setIsBerserkPlaying(true);
+        }).catch(err => {
+          console.error("Audio play failed:", err);
+          alert(`Audio error: ${err.message}`);
+          setIsBerserkPlaying(false);
+        });
+      }
+      return;
+    }
+
+    // First time - create audio instance
+    const newAudio = new Audio("/src/public/assets/audio/guts theme [slowed to perfection+soft rain].mp3");
+    newAudio.loop = true;
+    newAudio.volume = 0.7;
+    newAudio.preload = 'auto';
+    
+    berserkAudioRef.current = newAudio;
+    
+    newAudio.play().then(() => {
+      console.log("Audio loaded and playing");
+      setIsBerserkPlaying(true);
+    }).catch(err => {
+      console.error("Failed to load/play audio:", err);
+      alert(`Audio error: ${err.message}`);
+      setIsBerserkPlaying(false);
+    });
+  };
 
   const pauseOnInputFocus = () => {
     if (isRunning) {
@@ -214,39 +281,39 @@ const Pomodoro = ({mode}) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
-          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#d3ecdbd7]'} items-center gap-4 justify-between left-10 px-3 py-1 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border border-b-emerald-800  z-10`}
+          className={`flex absolute ${mode ? 'bg-gray-800' : 'bg-[#f7fbf8d7]'} items-center gap-6  justify-between left-10 px-4 py-2 ${showReset ? 'bottom-48' : 'bottom-51'} rounded-2xl border-r border-l border-b border-[#a8a89a] z-10`}
         >
           <input
             type="number"
             value={hours}
             onChange={(e) => setHours(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
-            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
+            className={`focus:outline-none w-20 text-center rounded-md bg-transparent font-bold text-3xl tracking-[0.15em] transition-colors hover:bg-[#AABDB0] cursor-pointer ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)', paddingRight: '0.5rem' }}
             placeholder="00"
             min="0"
             max="23"
           />
-          <span className={`font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
+          <span className={`font-bold text-3xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
           <input
             type="number"
             value={minutes}
             onChange={(e) => setMinutes(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
-            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
+            className={`focus:outline-none w-20 text-center rounded-md bg-transparent font-bold text-3xl tracking-[0.15em] transition-colors hover:bg-[#AABDB0] cursor-pointer ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)', paddingRight: '0.5rem' }}
             placeholder="00"
             min="0"
             max="59"
           />
-          <span className={`font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
+          <span className={`font-bold text-3xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`} style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}>:</span>
           <input
             type="number"
             value={seconds}
             onChange={(e) => setSeconds(Number(e.target.value))}
             onFocus={pauseOnInputFocus}
-            className={`focus:outline-none w-16 text-center bg-transparent font-bold text-2xl tracking-[0.15em] ${mode ? 'text-white' : 'text-black'}`}
-            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)' }}
+            className={`focus:outline-none w-20 text-center rounded-md bg-transparent font-bold text-3xl tracking-[0.15em] transition-colors hover:bg-[#AABDB0] cursor-pointer ${mode ? 'text-white' : 'text-black'}`}
+            style={{ fontFamily: 'monospace', textShadow: '0 0 8px rgba(0,0,0,0.2)', paddingRight: '0.5rem' }}
             placeholder="00"
             min="0"
             max="59"
@@ -254,25 +321,46 @@ const Pomodoro = ({mode}) => {
         </motion.div>
       )}
 
-      {/* Control Buttons */}
-      <div className="absolute left-36 bottom-32 flex gap-4 z-10">
-        <motion.button
-          {...iconMotionProps}
-          onClick={handleToggle}
-          className={`px-3 py-2 bg-white rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
-        >
-          {isRunning ? "Pause" : "Start"}
-        </motion.button>
-
-        {showReset && (
+      {/* Control Buttons + Berserk trigger */}
+      <div className="absolute left-36 bottom-16 flex flex-col items-center gap-6 z-10">
+      <div className={`flex gap-4 ${isRunning ? '-ml-[5rem]' : ''}`}>
           <motion.button
             {...iconMotionProps}
-            onClick={resetTimer}
-            className={`px-6 py-2 rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
+            onClick={handleToggle}
+            className={`px-6 py-2 rounded-lg shadow ml-15 font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
           >
-            Reset
+            {isRunning ? "Pause" : "Start"}
           </motion.button>
-        )}
+
+          {showReset && (
+            <motion.button
+              {...iconMotionProps}
+              onClick={resetTimer}
+              className={`px-6 py-2 rounded-lg shadow font-semibold focus:outline-none ${mode ? 'text-white bg-gray-700' : 'text-white'}`}
+            >
+              Reset
+            </motion.button>
+          )}
+        </div>
+
+        <motion.button
+          type="button"
+          onClick={toggleBerserkTheme}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className={`relative h-14 w-14 rounded-full ${isRunning ? '-ml-[1rem]' : 'ml-15'} shadow-lg ring-2 transition-all duration-200 focus:outline-none flex items-center justify-center overflow-hidden opacity-90 blur-xs ${
+            isBerserkPlaying
+              ? "ring-black bg-transparent"
+              : "ring-black hover:ring-black bg-transparent"
+          }`}
+          title="Play/Pause Berserk theme"
+        >
+          <img
+            src="https://images.cults3d.com/GkjSoJRetb9X0ZlhM_2-_psGWU8=/516x516/filters:no_upscale():format(webp)/https://fbi.cults3d.com/uploaders/22814621/illustration-file/4feabc25-eae9-405f-87d7-f93c0a95aa7e/berserk-symbole-2.png"
+            alt="Berserk Brand"
+            className={`w-full h-full object-cover rounded-full transition-all ${isBerserkPlaying ? "animate-pulse scale-110 brightness-70" : "brightness-100"}`}
+          />
+        </motion.button>
       </div>
 
       {/* Hourglass Icon */}
