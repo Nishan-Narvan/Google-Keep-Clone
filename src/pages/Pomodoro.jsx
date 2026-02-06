@@ -225,7 +225,7 @@ const Pomodoro = ({mode}) => {
     }
 
     // First time - create audio instance
-    const newAudio = new Audio("/src/public/assets/audio/guts theme [slowed to perfection+soft rain].mp3");
+    const newAudio = new Audio("/assets/audio/guts-theme.mp3");
     newAudio.loop = true;
     newAudio.volume = 0.7;
     newAudio.preload = 'auto';
