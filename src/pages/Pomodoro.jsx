@@ -196,7 +196,7 @@ const Pomodoro = ({mode}) => {
       clearInterval(intervalRef.current);
       if (berserkAudioRef.current) {
         berserkAudioRef.current.pause();
-        berserkAudioRef.current.src = "";
+        berserkAudioRef.current.currentTime = 0;
       }
     };
   }, []);

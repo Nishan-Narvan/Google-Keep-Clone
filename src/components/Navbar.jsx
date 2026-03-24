@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { FaBars, FaMoon, FaLightbulb, FaVolumeUp, FaPlay, FaPause, FaMusic, FaStop, FaPalette, FaCloudRain, FaFireAlt, FaLeaf, FaCoffee } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import logo from "../public/assets/logo.png";
 import { useAppContext } from "../context/AppContext";
+import { useAudio } from "../hooks/useAudio";
 
 const Navbar = () => {
   const {
@@ -17,8 +18,13 @@ const Navbar = () => {
   const [showSoundMenu, setShowSoundMenu] = useState(false);
   const [showBgDialog, setShowBgDialog] = useState(false);
   const [bgInput, setBgInput] = useState("");
-  
-  const audioInstancesRef = useRef(new Map()); // Map of soundType -> Audio instance
+
+  // Ambient sound hooks
+  const rain = useAudio("/assets/audio/rain-03.mp3", { loop: true, volume: 0.3 });
+  const fire = useAudio("/assets/audio/lit-fireplace-6307.mp3", { loop: true, volume: 0.3 });
+  const spring = useAudio("/assets/audio/spring-weather-1.mp3", { loop: true, volume: 0.3 });
+  const cafe = useAudio("/assets/audio/cafe-noise-32940.mp3", { loop: true, volume: 0.3 });
+
   const navigate = useNavigate();
   
   // Close sound menu when clicking outside
@@ -35,17 +41,15 @@ const Navbar = () => {
     };
   }, [showSoundMenu]);
 
-  // Cleanup audio on unmount
+  // Sync playingSounds set from individual isPlaying flags
   useEffect(() => {
-    return () => {
-      audioInstancesRef.current.forEach((audio) => {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.src = '';
-      });
-      audioInstancesRef.current.clear();
-    };
-  }, []);
+    const next = new Set();
+    if (rain.isPlaying) next.add("rain");
+    if (fire.isPlaying) next.add("fire");
+    if (spring.isPlaying) next.add("spring");
+    if (cafe.isPlaying) next.add("cafe");
+    setPlayingSounds(next);
+  }, [rain.isPlaying, fire.isPlaying, spring.isPlaying, cafe.isPlaying]);
 
   function redirectSearch() {
     navigate("/search");
@@ -61,78 +65,28 @@ const Navbar = () => {
 
   const stopAllSounds = () => {
     console.log('Stopping all sounds');
-    audioInstancesRef.current.forEach((audio, soundType) => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = '';
-    });
-    audioInstancesRef.current.clear();
-    setPlayingSounds(new Set());
+    rain.stop();
+    fire.stop();
+    spring.stop();
+    cafe.stop();
   };
 
   const stopSound = (soundType) => {
-    const audio = audioInstancesRef.current.get(soundType);
-    if (audio) {
-      console.log('Stopping sound:', soundType);
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = '';
-      audioInstancesRef.current.delete(soundType);
-      setPlayingSounds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(soundType);
-        return newSet;
-      });
-    }
+    console.log('Stopping sound:', soundType);
+    if (soundType === 'rain') rain.stop();
+    if (soundType === 'fire') fire.stop();
+    if (soundType === 'spring') spring.stop();
+    if (soundType === 'cafe') cafe.stop();
   };
 
   const playSound = (soundType) => {
     console.log('=== SOUND DEBUG ===');
     console.log('Button clicked for:', soundType);
-    console.log('Currently playing:', Array.from(playingSounds));
-    
-    // If this sound is already playing, stop it
-    if (playingSounds.has(soundType)) {
-      console.log('Stopping sound:', soundType);
-      stopSound(soundType);
-      return;
-    }
 
-    console.log('Starting new sound:', soundType);
-
-    // Create new audio with local sources
-    const soundUrls = {
-      rain: "/assets/audio/rain-03.mp3",
-      fire: "/assets/audio/lit-fireplace-6307.mp3", 
-      spring: "/assets/audio/spring-weather-1.mp3",
-      cafe: "/assets/audio/cafe-noise-32940.mp3"
-    };
-
-    const newAudio = new Audio(soundUrls[soundType]);
-    newAudio.loop = true;
-    newAudio.volume = 0.3;
-    newAudio.preload = 'auto';
-    
-    // Store in Map
-    audioInstancesRef.current.set(soundType, newAudio);
-    
-    // Try to play the audio
-    newAudio.play().then(() => {
-      console.log('Audio started playing successfully for:', soundType);
-      setPlayingSounds(prev => new Set([...prev, soundType]));
-    }).catch(err => {
-      console.log("Audio play failed for", soundType, ":", err);
-      console.log("Error details:", err.message);
-      
-      // Handle autoplay policy errors
-      if (err.name === 'NotAllowedError') {
-        alert(`Browser blocked autoplay for ${soundType}. Click the sound button again to play.`);
-      } else {
-        alert(`Could not play ${soundType} sound. Error: ${err.message}`);
-      }
-      
-      stopSound(soundType);
-    });
+    if (soundType === 'rain') rain.toggle();
+    if (soundType === 'fire') fire.toggle();
+    if (soundType === 'spring') spring.toggle();
+    if (soundType === 'cafe') cafe.toggle();
   };
 
   const toggleSoundMenu = () => {
