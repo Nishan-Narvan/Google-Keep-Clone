@@ -54,10 +54,16 @@ export function useAudio(src, { loop = false, volume = 1 } = {}) {
   };
 
   const toggle = () => {
-    if (isPlaying) {
-      stop();
-    } else {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Use the actual audio element state to decide, so we
+    // don't depend on potentially stale React state when the
+    // user clicks very quickly after play starts.
+    if (audio.paused) {
       play();
+    } else {
+      stop();
     }
   };
 

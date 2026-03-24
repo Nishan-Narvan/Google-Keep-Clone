@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { FaHourglassHalf } from "react-icons/fa";
 import { useAppContext } from "../context/AppContext";
+import { useAudio } from "../hooks/useAudio";
 
 const iconMotionProps = {
   whileHover: {
@@ -95,9 +96,11 @@ const Pomodoro = ({mode}) => {
   const [isBerserkPlaying, setIsBerserkPlaying] = useState(false);
 
   const intervalRef = useRef(null);
-  const berserkAudioRef = useRef(null);
   const initialTotalTimeRef = useRef(0);
   const completionRef = useRef(false);
+
+  // Berserk theme audio using shared hook
+  const berserk = useAudio("/assets/audio/guts-theme.mp3", { loop: true, volume: 0.7 });
 
   const totalSeconds = () => hours * 3600 + minutes * 60 + seconds;
 
@@ -194,52 +197,13 @@ const Pomodoro = ({mode}) => {
   useEffect(() => {
     return () => {
       clearInterval(intervalRef.current);
-      if (berserkAudioRef.current) {
-        berserkAudioRef.current.pause();
-        berserkAudioRef.current.currentTime = 0;
-      }
     };
   }, []);
 
   const toggleBerserkTheme = () => {
-    // If audio is already initialized, just toggle play/pause
-    if (berserkAudioRef.current) {
-      const audio = berserkAudioRef.current;
-      
-      if (isBerserkPlaying) {
-        audio.pause();
-        audio.currentTime = 0;
-        setIsBerserkPlaying(false);
-      } else {
-        audio.currentTime = 0;
-        audio.play().then(() => {
-          console.log("Audio playing");
-          setIsBerserkPlaying(true);
-        }).catch(err => {
-          console.error("Audio play failed:", err);
-          alert(`Audio error: ${err.message}`);
-          setIsBerserkPlaying(false);
-        });
-      }
-      return;
-    }
-
-    // First time - create audio instance
-    const newAudio = new Audio("/assets/audio/guts-theme.mp3");
-    newAudio.loop = true;
-    newAudio.volume = 0.7;
-    newAudio.preload = 'auto';
-    
-    berserkAudioRef.current = newAudio;
-    
-    newAudio.play().then(() => {
-      console.log("Audio loaded and playing");
-      setIsBerserkPlaying(true);
-    }).catch(err => {
-      console.error("Failed to load/play audio:", err);
-      alert(`Audio error: ${err.message}`);
-      setIsBerserkPlaying(false);
-    });
+    berserk.toggle();
+    // Local state mirrors hook state for UI classes; hook controls actual audio
+    setIsBerserkPlaying(prev => !prev);
   };
 
   const pauseOnInputFocus = () => {
