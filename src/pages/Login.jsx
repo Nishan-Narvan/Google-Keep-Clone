@@ -67,6 +67,11 @@ export default function Login() {
     setError("");
     
     try {
+      // Get API URL from environment or use production URL
+      const apiUrl = import.meta.env?.VITE_API_URL || 
+                     (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) ||
+                     'http://localhost:5000';
+      
       // Open Google OAuth in a popup window
       const width = 500;
       const height = 600;
@@ -74,7 +79,7 @@ export default function Login() {
       const top = window.innerHeight / 2 - height / 2;
       
       const popup = window.open(
-        'http://localhost:5000/api/auth/google',
+        `${apiUrl}/api/auth/google`,
         'GoogleAuth',
         `width=${width},height=${height},left=${left},top=${top}`
       );
